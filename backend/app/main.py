@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.models.schemas import TextInput, ConceptResponse, ScenePlanResponse
+from app.models.schemas import TextInput, ConceptResponse, ScenePlanResponse, FullPipelineResponse
 from app.agents.concept_agent import ConceptAgent
 from app.agents.scene_agent import SceneAgent
 
@@ -47,5 +47,25 @@ async def generate_scenes(concept: ConceptResponse):
         raise HTTPException(status_code=400, detail="At least one key concept is required.")
     try:
         return await scene_agent.plan(concept)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/process-notes", response_model=FullPipelineResponse, tags=["Pipeline"])
+async def process_notes(payload: TextInput):
+    """
+    Full pipeline: raw notes → concept extraction → scene plan.
+    Runs ConceptAgent then SceneAgent in sequence and returns both results.
+    """
+    if not payload.text.strip():
+        raise HTTPException(status_code=400, detail="Input text cannot be empty.")
+    try:
+        # Step 1: Extract structured concepts from raw text
+        concept = await concept_agent.analyze(payload.text)
+
+        # Step 2: Use concepts to generate a scene-by-scene video plan
+        scene_plan = await scene_agent.plan(concept)
+
+        return FullPipelineResponse(concept=concept, scene_plan=scene_plan)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
