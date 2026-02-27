@@ -40,3 +40,10 @@ class ScenePlanResponse(BaseModel):
     total_scenes: int
     estimated_total_duration: int = Field(..., description="Sum of all scene durations in seconds.")
     scenes: List[Scene]
+
+
+# ── Combined Pipeline ──────────────────────────────────────────────────────────
+
+class FullPipelineResponse(BaseModel):
+    concept: ConceptResponse
+    scene_plan: ScenePlanResponse
